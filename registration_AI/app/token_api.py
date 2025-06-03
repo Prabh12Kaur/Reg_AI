@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Blueprint, request, jsonify
 import qrcode
 import io
 import uuid
@@ -8,13 +8,13 @@ from PIL import Image, ImageDraw, ImageFont
 import psycopg2
 from datetime import datetime, timedelta
 
-app = Flask(__name__)
+token_bp = Blueprint('token_bp', __name__)
 
 # PostgreSQL connection config
 DB_HOST = 'localhost'
 DB_NAME = 'MeghalayaDev'
 DB_USER = 'postgres'
-DB_PASS = 'root'
+DB_PASS = 'Harsha@123'
 
 def insert_token_to_db(token, patient_id, department_id, dt_str):
     dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M")
@@ -43,7 +43,7 @@ def insert_token_to_db(token, patient_id, department_id, dt_str):
     conn.close()
     return new_id, dt, expires_at
 
-def generate_qr_card_image(patient_id, name, department_id, valid_till, token, qr_url):
+def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_url):
     # Generate QR code image
     qr = qrcode.make(qr_url)
     qr = qr.resize((200, 200))
@@ -58,12 +58,11 @@ def generate_qr_card_image(patient_id, name, department_id, valid_till, token, q
         font = ImageFont.load_default()
 
     # Draw text fields
-    draw.text((220, 20), f"Patient: {name}", fill="black", font=font)
-    draw.text((220, 50), f"Dept: {department_id}", fill="black", font=font)
-    draw.text((220, 80), f"Valid till:", fill="black", font=font)
-    draw.text((220, 100), valid_till.strftime("%Y-%m-%d %H:%M"), fill="black", font=font)
-    draw.text((220, 140), f"Token:", fill="black", font=font)
-    draw.text((220, 160), token[:8], fill="black", font=font)  # Show short token
+    draw.text((220, 50), f"Name: {name}", fill="black", font=font)
+    draw.text((220, 80), f"Dept: {department_id}", fill="black", font=font)
+    draw.text((220, 100), f"Valid till:", fill="black", font=font)
+    draw.text((220, 140), valid_till.strftime("%Y-%m-%d %H:%M"), fill="black", font=font)
+    draw.text((220, 180), f"Token No.:{id}", fill="black", font=font)
 
     # Paste QR code
     card.paste(qr, (10, 50))
@@ -73,11 +72,12 @@ def generate_qr_card_image(patient_id, name, department_id, valid_till, token, q
     card.save(buf, format="PNG")
     return b64encode(buf.getvalue()).decode("utf-8")
 
-@app.route("/register", methods=["POST"])
+@token_bp.route("/register", methods=["POST"])
 def register():
     try:
         data = request.get_json()
         patient_id = data["patient_id"]
+        name = data["name"]
         department_id = data["department_id"]
         datetime_str = data["date_time"]
 
@@ -86,7 +86,8 @@ def register():
 
         daily_id, dt, expires_at = insert_token_to_db(token, patient_id, department_id, datetime_str)
         qr_url = f"{request.host_url}patient-info?upid={patient_id}"
-        qr_card_b64 = generate_qr_card_image(patient_id, department_id, expires_at, token, qr_url)
+        print(qr_url)
+        qr_card_b64 = generate_qr_card_image(patient_id, name, department_id, expires_at, daily_id, qr_url)
 
         return jsonify({
             "message": "Patient registered successfully",
@@ -105,6 +106,3 @@ def register():
         return jsonify({"error": f"Missing field: {e}"}), 400
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
-if __name__ == "__main__":
-    app.run(debug=True)

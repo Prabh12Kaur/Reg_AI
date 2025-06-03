@@ -1,13 +1,13 @@
-from flask import Flask, request, jsonify
+from flask import Blueprint, request, jsonify
 from flask_cors import CORS
 from pyaadhaar.decode import AadhaarSecureQr
 import json
 import xml.etree.ElementTree as ET
 
-app = Flask(__name__)
-CORS(app)
+scan_bp = Blueprint('scan_bp', __name__)
+CORS(scan_bp)
 
-@app.route('/parse_qr', methods=['POST'])
+@scan_bp.route('/parse_qr', methods=['POST'])
 def parse_qr():
     qr_data = request.json.get('qrData', '').strip()
 
@@ -64,6 +64,3 @@ def parse_qr():
         print("ABHA QR Decode Error:", e)
 
     return jsonify({'error': 'Unsupported or invalid QR data'}), 400
-
-if __name__ == '__main__':
-    app.run(debug=True)
