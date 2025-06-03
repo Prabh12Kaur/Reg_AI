@@ -1,0 +1,6 @@
+To install dependencies use:
+pip install -r requirements.txt
+
+To run:
+python run.py
+
