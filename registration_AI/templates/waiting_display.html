@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Token Display</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #000;
+      color: #fff;
+      padding-top: 80px;
+    }
+    .token {
+      font-size: 100px;
+      font-weight: bold;
+    }
+    .name {
+      font-size: 50px;
+      margin-top: 30px;
+    }
+  </style>
+</head>
+<body>
+  <div class="token" id="token">Token: --</div>
+  <div class="name" id="name">Waiting for call...</div>
+
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+  <script>
+    const socket = io('http://localhost:5000');
+
+    socket.on('update-token', (data) => {
+      document.getElementById("token").textContent = "Token: " + data.token;
+      document.getElementById("name").textContent = data.name;
+    });
+
+    fetch('http://localhost:5000/api/current-token')
+      .then(res => res.json())
+      .then(data => {
+        if (data.token && data.name) {
+          document.getElementById("token").textContent = "Token: " + data.token;
+          document.getElementById("name").textContent = data.name;
+        }
+      });
+  </script>
+</body>
+</html>

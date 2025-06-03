@@ -1,0 +1,5 @@
+Flask
+Flask-Cors
+Flask-SocketIO
+eventlet
+psycopg2

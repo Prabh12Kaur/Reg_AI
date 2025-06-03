@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Doctor Interface</title>
+</head>
+<body>
+  <h1>Doctor Panel</h1>
+  <button onclick="callNext()">Call Next</button>
+  <div id="current">No token yet</div>
+
+  <script>
+    function callNext() {
+      fetch('http://localhost:5000/api/call-next', { method: 'POST' })
+        .then(res => res.json())
+        .then(data => {
+          document.getElementById("current").innerText =
+            data.token ? `Token ${data.token}: ${data.name}` : data.message;
+        });
+    }
+  </script>
+</body>
+</html>
