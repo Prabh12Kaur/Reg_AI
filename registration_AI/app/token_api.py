@@ -12,7 +12,7 @@ token_bp = Blueprint('token_bp', __name__)
 
 # PostgreSQL connection config
 DB_HOST = 'localhost'
-DB_NAME = 'MeghalayaDev'
+DB_NAME = 'Meghalaya3'
 DB_USER = 'postgres'
 DB_PASS = 'Harsha@123'
 
@@ -49,7 +49,7 @@ def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_u
     qr = qr.resize((200, 200))
 
     # Create a blank image
-    card = Image.new("RGB", (400, 300), color="white")
+    card = Image.new("RGB", (400, 400), color="white")
     draw = ImageDraw.Draw(card)
 
     try:
@@ -58,11 +58,11 @@ def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_u
         font = ImageFont.load_default()
 
     # Draw text fields
-    draw.text((220, 50), f"Name: {name}", fill="black", font=font)
-    draw.text((220, 80), f"Dept: {department_id}", fill="black", font=font)
-    draw.text((220, 100), f"Valid till:", fill="black", font=font)
-    draw.text((220, 140), valid_till.strftime("%Y-%m-%d %H:%M"), fill="black", font=font)
-    draw.text((220, 180), f"Token No.:{id}", fill="black", font=font)
+    draw.text((200, 50), f"Name: {name}", fill="black", font=font)
+    draw.text((200, 80), f"Dept: {department_id}", fill="black", font=font)
+    draw.text((200, 100), f"Valid till:", fill="black", font=font)
+    draw.text((200, 140), valid_till.strftime("%Y-%m-%d %H:%M"), fill="black", font=font)
+    draw.text((200, 180), f"Token No.:{id}", fill="black", font=font)
 
     # Paste QR code
     card.paste(qr, (10, 50))
