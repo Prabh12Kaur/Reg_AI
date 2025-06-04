@@ -14,3 +14,13 @@ CREATE TABLE patient_tokens (
     datetime TIMESTAMP NOT NULL,
     expires_at TIMESTAMP NOT NULL
 );
+
+Make sure the current_token table is installed in your system before using announcement_api:
+
+CREATE TABLE current_token (
+    id SERIAL PRIMARY KEY,
+    token_uuid UUID NOT NULL,
+    token_number INTEGER NOT NULL,
+    patient_id VARCHAR(255) NOT NULL,
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+);
