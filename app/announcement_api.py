@@ -97,3 +97,25 @@ def doctor_display():
 @announcement_bp.route('/waiting-display')
 def waiting_display():
     return render_template("waiting_display.html")
+
+@announcement_bp.route('/api/announce-current', methods=['POST'])
+def announce_current():
+    with get_db_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT token_number, patient_id
+                FROM current_token
+                ORDER BY updated_at DESC
+                LIMIT 1
+            """)
+            row = cur.fetchone()
+            
+            if row:
+                # Re-emit the current token to trigger announcement
+                socketio.emit('update-token', {
+                    "token": row["token_number"],
+                    "name": row["patient_id"]  # This contains the patient name in your current implementation
+                })
+                return jsonify({"success": True, "message": "Announcement repeated"}), 200
+            else:
+                return jsonify({"success": False, "message": "No current token"}), 200
