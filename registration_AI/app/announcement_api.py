@@ -10,6 +10,17 @@ from db_config import DB_HOST, DB_NAME, DB_USER, DB_PASS
 
 announcement_bp = Blueprint('announcement', __name__)
 
+<<<<<<< HEAD
+=======
+DB_CONFIG = {
+    'dbname': 'Meghalaya3',
+    'user': 'postgres',
+    'password': 'Harsha@123',
+    'host': 'localhost',
+    'port': '5432'
+}
+
+>>>>>>> d921499e3a7916d667190d62b354ba6dbbc80ee6
 def get_db_connection():
     return psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
 
@@ -20,12 +31,13 @@ def fetch_next_token():
             last_served_id = cur.fetchone()["coalesce"]
 
             cur.execute("""
-                SELECT token, id, patient_id
-                FROM patient_tokens
-                WHERE datetime::date = CURRENT_DATE
-                  AND expires_at > NOW()
-                  AND id > %s
-                ORDER BY id ASC
+                SELECT pt.token, pt.id, p.first_name, p.last_name
+                FROM patient_tokens pt
+                JOIN patients p ON pt.patient_id = p.patient_id
+                WHERE pt.datetime::date = CURRENT_DATE
+                  AND pt.expires_at > NOW()
+                  AND pt.id > %s
+                ORDER BY pt.id ASC
                 LIMIT 1
             """, (last_served_id,))
             row = cur.fetchone()
@@ -33,7 +45,7 @@ def fetch_next_token():
                 return {
                     "uuid": row["token"],
                     "token": row["id"],
-                    "name": row["patient_id"]
+                    "name": f"{row['first_name']} {row['last_name']}"
                 }
     return None
 
@@ -72,26 +84,27 @@ def call_next():
 @announcement_bp.route('/api/current-token', methods=['GET'])
 def get_current_token():
     with get_db_connection() as conn:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT token_number, patient_id
-                FROM current_token
-                ORDER BY updated_at DESC
+                SELECT ct.token_number, p.first_name, p.last_name
+                FROM current_token ct
+                JOIN patients p ON ct.patient_id = p.patient_id
+                ORDER BY ct.updated_at DESC
                 LIMIT 1
             """)
             row = cur.fetchone()
             if row:
                 return jsonify({
-                    "token": row[0],
-                    "name": row[1]
+                    "token": row["token_number"],
+                    "name": f"{row['first_name']} {row['last_name']}"
                 }), 200
             else:
                 return jsonify({"message": "No current token"}), 200
 
 @announcement_bp.route('/doctor-display')
 def doctor_display():
-    return render_template("templates/doctor_display.html")
+    return render_template("doctor_display.html")
 
 @announcement_bp.route('/waiting-display')
 def waiting_display():
-    return render_template("templates/waiting_display.html")
+    return render_template("waiting_display.html")

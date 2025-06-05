@@ -10,10 +10,12 @@
       color: #fff;
       padding-top: 80px;
     }
+
     .token {
       font-size: 100px;
       font-weight: bold;
     }
+
     .name {
       font-size: 50px;
       margin-top: 30px;
@@ -26,21 +28,104 @@
 
   <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
   <script>
+    let audioEnabled = false;
+    let lastTokenData = null;
+
+    const tokenEl = document.getElementById("token");
+    const nameEl = document.getElementById("name");
+
     const socket = io('http://localhost:5000');
 
     socket.on('update-token', (data) => {
-      document.getElementById("token").textContent = "Token: " + data.token;
-      document.getElementById("name").textContent = data.name;
+      const token = data.token;
+      const name = data.name;
+
+      tokenEl.textContent = "Token: " + token;
+      nameEl.textContent = name;
+
+      lastTokenData = { token, name };
+
+      if (audioEnabled) {
+        speakMultiLang(token, name);
+      }
     });
 
     fetch('http://localhost:5000/api/current-token')
       .then(res => res.json())
       .then(data => {
         if (data.token && data.name) {
-          document.getElementById("token").textContent = "Token: " + data.token;
-          document.getElementById("name").textContent = data.name;
+          tokenEl.textContent = "Token: " + data.token;
+          nameEl.textContent = data.name;
+          lastTokenData = data;
         }
       });
+
+    function enableAudioOnce() {
+      if (!audioEnabled) {
+        audioEnabled = true;
+        if (lastTokenData) {
+          speakMultiLang(lastTokenData.token, lastTokenData.name);
+        }
+      }
+    }
+
+    window.addEventListener('click', enableAudioOnce, { once: true });
+    window.addEventListener('keydown', enableAudioOnce, { once: true });
+
+    // Fix voices loading
+    let cachedVoices = [];
+
+    function getIndianVoice() {
+      const voices = speechSynthesis.getVoices();
+      if (voices.length === 0) return null;
+      return voices.find(v => /Priya|Ravi|Heera/.test(v.name)) || voices.find(v => v.lang === "en-IN") || voices[0];
+    }
+
+    function speakMultiLang(token, name) {
+      speechSynthesis.cancel();
+
+      const voice = getIndianVoice();
+      if (!voice) {
+        console.warn("No suitable voice found");
+        return;
+      }
+
+      const eng = new SpeechSynthesisUtterance(`Token number ${token}. ${name}, please proceed to the doctor's room.`);
+      eng.voice = voice;
+      eng.rate = 0.9;
+
+      const khasiToken = convertNumberToKhasi(token);
+      const khasi = new SpeechSynthesisUtterance(`Token number ${khasiToken}. ${name}, phi sngewbha rung sha kamra doktor.`);
+      khasi.voice = voice;
+      khasi.rate = 0.9;
+
+      eng.onend = () => setTimeout(() => speechSynthesis.speak(khasi), 300);
+      speechSynthesis.speak(eng);
+    }
+
+    function convertNumberToKhasi(num) {
+      const units = ["", "wei", "ar", "lai", "saw", "san", "hynriew", "hynniaw", "phra", "khyndai"];
+      const tens = {
+        10: "shiphew", 20: "arphew", 30: "laiphew", 40: "sawphew",
+        50: "sanphew", 60: "hynriewphew", 70: "hynniawphew",
+        80: "phraphew", 90: "khyndaiphew"
+      };
+
+      if (num === 0) return "sunya";
+      if (num <= 9) return units[num];
+      if (num === 10) return tens[10];
+      if (num > 10 && num < 20) return `${tens[10]} ${units[num - 10]}`;
+
+      const t = Math.floor(num / 10) * 10;
+      const u = num % 10;
+      return `${tens[t]}${u > 0 ? ' ' + units[u] : ''}`;
+    }
+
+    // Wait for voice load
+    window.speechSynthesis.onvoiceschanged = () => {
+      cachedVoices = speechSynthesis.getVoices();
+      console.log("Voices loaded:", cachedVoices.map(v => v.name));
+    };
   </script>
 </body>
 </html>
