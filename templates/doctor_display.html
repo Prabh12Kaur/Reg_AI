@@ -6,17 +6,49 @@
 <body>
   <h1>Doctor Panel</h1>
   <button onclick="callNext()">Call Next</button>
+  <button onclick="announceAgain()">Announce Again</button>
   <div id="current">No token yet</div>
 
   <script>
+    let currentToken = null;
+    let currentName = null;
+
     function callNext() {
       fetch('http://localhost:5000/api/call-next', { method: 'POST' })
         .then(res => res.json())
         .then(data => {
-          document.getElementById("current").innerText =
-            data.token ? `Token ${data.token}: ${data.name}` : data.message;
+          if (data.token) {
+            document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
+            currentToken = data.token;
+            currentName = data.name;
+          } else {
+            document.getElementById("current").innerText = data.message;
+          }
         });
     }
+
+    function announceAgain() {
+      if (currentToken && currentName) {
+        fetch('http://localhost:5000/api/announce-current', { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+            console.log(data.message || "Announcement repeated");
+          });
+      } else {
+        alert("No current token to announce");
+      }
+    }
+
+    // Load current token on page load
+    fetch('http://localhost:5000/api/current-token')
+      .then(res => res.json())
+      .then(data => {
+        if (data.token && data.name) {
+          document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
+          currentToken = data.token;
+          currentName = data.name;
+        }
+      });
   </script>
 </body>
 </html>
