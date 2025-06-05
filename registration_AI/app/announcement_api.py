@@ -10,17 +10,6 @@ from db_config import DB_HOST, DB_NAME, DB_USER, DB_PASS
 
 announcement_bp = Blueprint('announcement', __name__)
 
-<<<<<<< HEAD
-=======
-DB_CONFIG = {
-    'dbname': 'Meghalaya3',
-    'user': 'postgres',
-    'password': 'Harsha@123',
-    'host': 'localhost',
-    'port': '5432'
-}
-
->>>>>>> d921499e3a7916d667190d62b354ba6dbbc80ee6
 def get_db_connection():
     return psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
 
