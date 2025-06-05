@@ -6,19 +6,12 @@ from app import socketio
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from datetime import datetime
+from db_config import DB_HOST, DB_NAME, DB_USER, DB_PASS
 
 announcement_bp = Blueprint('announcement', __name__)
 
-DB_CONFIG = {
-    'dbname': 'your_db',
-    'user': 'your_user',
-    'password': 'your_password',
-    'host': 'localhost',
-    'port': '5432'
-}
-
 def get_db_connection():
-    return psycopg2.connect(**DB_CONFIG)
+    return psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
 
 def fetch_next_token():
     with get_db_connection() as conn:

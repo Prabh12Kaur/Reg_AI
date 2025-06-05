@@ -7,14 +7,9 @@ from base64 import b64encode
 from PIL import Image, ImageDraw, ImageFont
 import psycopg2
 from datetime import datetime, timedelta
+from db_config import DB_HOST, DB_NAME, DB_USER, DB_PASS
 
 token_bp = Blueprint('token_bp', __name__)
-
-# PostgreSQL connection config
-DB_HOST = 'localhost'
-DB_NAME = 'MeghalayaDev'
-DB_USER = 'postgres'
-DB_PASS = 'Harsha@123'
 
 def insert_token_to_db(token, patient_id, department_id, dt_str):
     dt = datetime.strptime(dt_str, "%Y-%m-%dT%H:%M")
@@ -44,12 +39,11 @@ def insert_token_to_db(token, patient_id, department_id, dt_str):
     return new_id, dt, expires_at
 
 def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_url):
-    # Generate QR code image
+
     qr = qrcode.make(qr_url)
     qr = qr.resize((200, 200))
 
-    # Create a blank image
-    card = Image.new("RGB", (400, 300), color="white")
+    card = Image.new("RGB", (400, 400), color="white")
     draw = ImageDraw.Draw(card)
 
     try:
@@ -57,17 +51,16 @@ def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_u
     except:
         font = ImageFont.load_default()
 
-    # Draw text fields
-    draw.text((220, 50), f"Name: {name}", fill="black", font=font)
-    draw.text((220, 80), f"Dept: {department_id}", fill="black", font=font)
-    draw.text((220, 100), f"Valid till:", fill="black", font=font)
-    draw.text((220, 140), valid_till.strftime("%Y-%m-%d %H:%M"), fill="black", font=font)
-    draw.text((220, 180), f"Token No.:{id}", fill="black", font=font)
+    qr_x = (card.width - qr.width) // 2
+    card.paste(qr, (qr_x, 10))
 
-    # Paste QR code
-    card.paste(qr, (10, 50))
+    text_y_start = 230
+    line_height = 25
+    draw.text((20, text_y_start), f"Patient ID: {patient_id} {name}", fill="black", font=font)
+    draw.text((20, text_y_start + line_height), f"Department: {department_id}", fill="black", font=font)
+    draw.text((20, text_y_start + 2 * line_height), f"Valid till: {valid_till.strftime('%Y-%m-%d %H:%M')}", fill="black", font=font)
+    draw.text((20, text_y_start + 3 * line_height), f"Token number: {id}", fill="black", font=font)
 
-    # Convert to base64
     buf = io.BytesIO()
     card.save(buf, format="PNG")
     return b64encode(buf.getvalue()).decode("utf-8")
