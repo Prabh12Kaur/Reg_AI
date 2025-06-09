@@ -5,50 +5,68 @@
 </head>
 <body>
   <h1>Doctor Panel</h1>
+  <div id="department-label" style="font-size: 20px; color: green;"></div>
+
   <button onclick="callNext()">Call Next</button>
   <button onclick="announceAgain()">Announce Again</button>
-  <div id="current">No token yet</div>
+  <div id="current" style="margin-top: 20px;">No token yet</div>
 
   <script>
+    // Get department from URL, default to OPD
+    const urlParams = new URLSearchParams(window.location.search);
+    const department = urlParams.get("department") || "OPD";
+    document.getElementById("department-label").textContent = `Department: ${department}`;
+
     let currentToken = null;
     let currentName = null;
 
     function callNext() {
-      fetch('http://localhost:5000/api/call-next', { method: 'POST' })
-        .then(res => res.json())
-        .then(data => {
-          if (data.token) {
-            document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
-            currentToken = data.token;
-            currentName = data.name;
-          } else {
-            document.getElementById("current").innerText = data.message;
-          }
-        });
+      fetch('http://localhost:5000/api/call-next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department_id: department })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
+          currentToken = data.token;
+          currentName = data.name;
+        } else {
+          document.getElementById("current").innerText = data.message;
+        }
+      });
     }
 
     function announceAgain() {
       if (currentToken && currentName) {
-        fetch('http://localhost:5000/api/announce-current', { method: 'POST' })
-          .then(res => res.json())
-          .then(data => {
-            console.log(data.message || "Announcement repeated");
-          });
+        fetch('http://localhost:5000/api/announce-current', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ department_id: department })
+        })
+        .then(res => res.json())
+        .then(data => {
+          console.log(data.message || "Announcement repeated");
+        });
       } else {
         alert("No current token to announce");
       }
     }
 
-    // Load current token on page load
-    fetch('http://localhost:5000/api/current-token')
-      .then(res => res.json())
-      .then(data => {
-        if (data.token && data.name) {
-          document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
-          currentToken = data.token;
-          currentName = data.name;
-        }
-      });
+    function loadCurrentToken() {
+      fetch(`http://localhost:5000/api/current-token?department_id=${department}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.token && data.name) {
+            document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
+            currentToken = data.token;
+            currentName = data.name;
+          }
+        });
+    }
+
+    window.onload = loadCurrentToken;
   </script>
 </body>
 </html>

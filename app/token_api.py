@@ -16,15 +16,13 @@ def insert_token_to_db(token, patient_id, department_id, dt_str):
     expires_at = dt + timedelta(days=1)
     today = dt.date()
 
-    conn = psycopg2.connect(
-        host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS
-    )
+    conn = psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
     cur = conn.cursor()
 
     cur.execute("""
         SELECT COALESCE(MAX(id), 0) FROM patient_tokens
-        WHERE DATE(datetime) = %s
-    """, (today,))
+        WHERE DATE(datetime) = %s AND department_id = %s
+    """, (today, department_id))
     max_id_today = cur.fetchone()[0]
     new_id = max_id_today + 1
 
@@ -39,7 +37,6 @@ def insert_token_to_db(token, patient_id, department_id, dt_str):
     return new_id, dt, expires_at
 
 def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_url):
-
     qr = qrcode.make(qr_url)
     qr = qr.resize((200, 200))
 
@@ -79,7 +76,6 @@ def register():
 
         daily_id, dt, expires_at = insert_token_to_db(token, patient_id, department_id, datetime_str)
         qr_url = f"{request.host_url}patient-info?upid={patient_id}"
-        print(qr_url)
         qr_card_b64 = generate_qr_card_image(patient_id, name, department_id, expires_at, daily_id, qr_url)
 
         return jsonify({

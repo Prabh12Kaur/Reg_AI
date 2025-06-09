@@ -20,14 +20,27 @@
       font-size: 50px;
       margin-top: 30px;
     }
+
+    .department {
+      font-size: 30px;
+      margin-bottom: 40px;
+      color: #0f0;
+    }
   </style>
 </head>
 <body>
+  <div class="department" id="department-label"></div>
   <div class="token" id="token">Token: --</div>
   <div class="name" id="name">Waiting for call...</div>
 
   <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
   <script>
+    // Read ?department=Cardiology from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const department = urlParams.get("department") || "OPD";  // default to OPD
+
+    document.getElementById("department-label").textContent = `Department: ${department}`;
+
     let audioEnabled = false;
     let lastTokenData = null;
 
@@ -37,6 +50,7 @@
     const socket = io('http://localhost:5000');
 
     socket.on('update-token', (data) => {
+      // You can optionally add department checking here if your backend emits department info
       const token = data.token;
       const name = data.name;
 
@@ -50,7 +64,8 @@
       }
     });
 
-    fetch('http://localhost:5000/api/current-token')
+    // Load current token for this department on page load
+    fetch(`http://localhost:5000/api/current-token?department_id=${department}`)
       .then(res => res.json())
       .then(data => {
         if (data.token && data.name) {
@@ -72,7 +87,6 @@
     window.addEventListener('click', enableAudioOnce, { once: true });
     window.addEventListener('keydown', enableAudioOnce, { once: true });
 
-    // Fix voices loading
     let cachedVoices = [];
 
     function getIndianVoice() {
@@ -121,7 +135,6 @@
       return `${tens[t]}${u > 0 ? ' ' + units[u] : ''}`;
     }
 
-    // Wait for voice load
     window.speechSynthesis.onvoiceschanged = () => {
       cachedVoices = speechSynthesis.getVoices();
       console.log("Voices loaded:", cachedVoices.map(v => v.name));
