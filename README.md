@@ -34,6 +34,8 @@ CREATE TABLE current_token (
     token_uuid UUID NOT NULL,
     token_number INTEGER NOT NULL,
     patient_id VARCHAR(255) NOT NULL,
-    department_id VARCHAR(50) NOT NULL,           -- NEW: for department-wise tracking
-    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
+    department_id VARCHAR(50) NOT NULL,
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT unique_department UNIQUE (department_id)
 );
