@@ -16,7 +16,7 @@ def get_db_connection():
 def fetch_department_name(department_id):
     with get_db_connection() as conn:
         with conn.cursor() as cur:
-            cur.execute("SELECT name FROM departments WHERE id = %s", (department_id,))
+            cur.execute("SELECT name FROM specializations WHERE specialization_id = %s", (department_id,))
             result = cur.fetchone()
             return result[0] if result else "Unknown"
 
