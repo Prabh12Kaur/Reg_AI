@@ -13,6 +13,13 @@ announcement_bp = Blueprint('announcement', __name__)
 def get_db_connection():
     return psycopg2.connect(host=DB_HOST, dbname=DB_NAME, user=DB_USER, password=DB_PASS)
 
+def fetch_department_name(department_id):
+    with get_db_connection() as conn:
+        with conn.cursor() as cur:
+            cur.execute("SELECT name FROM departments WHERE id = %s", (department_id,))
+            result = cur.fetchone()
+            return result[0] if result else "Unknown"
+
 def fetch_next_token(department_id):
     with get_db_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -59,7 +66,8 @@ def call_next():
     if next_token:
         socketio.emit('update-token', {
             "token": next_token["token"],
-            "name": next_token["name"]
+            "name": next_token["name"],
+            "department": fetch_department_name(department_id)
         })
 
         with get_db_connection() as conn:
@@ -82,7 +90,8 @@ def call_next():
 
         return jsonify({
             "token": next_token["token"],
-            "name": next_token["name"]
+            "name": next_token["name"],
+            "department": fetch_department_name(department_id)
         }), 200
     else:
         return jsonify({"message": "No more tokens"}), 200
@@ -107,7 +116,8 @@ def get_current_token():
             if row:
                 return jsonify({
                     "token": row["token_number"],
-                    "name": f"{row['first_name']} {row['last_name']}"
+                    "name": f"{row['first_name']} {row['last_name']}",
+                    "department": fetch_department_name(department_id)
                 }), 200
             else:
                 return jsonify({"message": "No current token"}), 200
@@ -141,7 +151,8 @@ def announce_current():
             if row:
                 socketio.emit('update-token', {
                     "token": row["token_number"],
-                    "name": f"{row['first_name']} {row['last_name']}"
+                    "name": f"{row['first_name']} {row['last_name']}",
+                    "department": fetch_department_name(department_id)
                 })
                 return jsonify({"success": True, "message": "Announcement repeated"}), 200
             else:

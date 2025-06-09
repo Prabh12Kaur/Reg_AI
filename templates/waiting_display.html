@@ -35,22 +35,25 @@
 
   <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
   <script>
-    // Read ?department=Cardiology from URL
     const urlParams = new URLSearchParams(window.location.search);
-    const department = urlParams.get("department") || "OPD";  // default to OPD
-
-    document.getElementById("department-label").textContent = `Department: ${department}`;
+    const departmentId = urlParams.get("department_id") || "OPD";
 
     let audioEnabled = false;
     let lastTokenData = null;
 
     const tokenEl = document.getElementById("token");
     const nameEl = document.getElementById("name");
+    const departmentEl = document.getElementById("department-label");
+
+    fetch(`http://localhost:5000/api/department-name?department_id=${departmentId}`)
+      .then(res => res.json())
+      .then(data => {
+        departmentEl.textContent = `Department: ${data.department_name || departmentId}`;
+      });
 
     const socket = io('http://localhost:5000');
 
     socket.on('update-token', (data) => {
-      // You can optionally add department checking here if your backend emits department info
       const token = data.token;
       const name = data.name;
 
@@ -64,8 +67,7 @@
       }
     });
 
-    // Load current token for this department on page load
-    fetch(`http://localhost:5000/api/current-token?department_id=${department}`)
+    fetch(`http://localhost:5000/api/current-token?department_id=${departmentId}`)
       .then(res => res.json())
       .then(data => {
         if (data.token && data.name) {
@@ -87,11 +89,8 @@
     window.addEventListener('click', enableAudioOnce, { once: true });
     window.addEventListener('keydown', enableAudioOnce, { once: true });
 
-    let cachedVoices = [];
-
     function getIndianVoice() {
       const voices = speechSynthesis.getVoices();
-      if (voices.length === 0) return null;
       return voices.find(v => /Priya|Ravi|Heera/.test(v.name)) || voices.find(v => v.lang === "en-IN") || voices[0];
     }
 
@@ -99,10 +98,7 @@
       speechSynthesis.cancel();
 
       const voice = getIndianVoice();
-      if (!voice) {
-        console.warn("No suitable voice found");
-        return;
-      }
+      if (!voice) return;
 
       const eng = new SpeechSynthesisUtterance(`Token number ${token}. ${name}, please proceed to the doctor's room.`);
       eng.voice = voice;
@@ -136,8 +132,7 @@
     }
 
     window.speechSynthesis.onvoiceschanged = () => {
-      cachedVoices = speechSynthesis.getVoices();
-      console.log("Voices loaded:", cachedVoices.map(v => v.name));
+      console.log("Voices loaded:", speechSynthesis.getVoices().map(v => v.name));
     };
   </script>
 </body>

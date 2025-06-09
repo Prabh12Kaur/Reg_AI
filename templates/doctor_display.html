@@ -12,19 +12,24 @@
   <div id="current" style="margin-top: 20px;">No token yet</div>
 
   <script>
-    // Get department from URL, default to OPD
     const urlParams = new URLSearchParams(window.location.search);
-    const department = urlParams.get("department") || "OPD";
-    document.getElementById("department-label").textContent = `Department: ${department}`;
+    const departmentId = urlParams.get("department_id") || "OPD";
 
     let currentToken = null;
     let currentName = null;
+
+    fetch(`http://localhost:5000/api/department-name?department_id=${departmentId}`)
+      .then(res => res.json())
+      .then(data => {
+        document.getElementById("department-label").textContent =
+          `Department: ${data.department_name || departmentId}`;
+      });
 
     function callNext() {
       fetch('http://localhost:5000/api/call-next', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ department_id: department })
+        body: JSON.stringify({ department_id: departmentId })
       })
       .then(res => res.json())
       .then(data => {
@@ -43,7 +48,7 @@
         fetch('http://localhost:5000/api/announce-current', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ department_id: department })
+          body: JSON.stringify({ department_id: departmentId })
         })
         .then(res => res.json())
         .then(data => {
@@ -55,7 +60,7 @@
     }
 
     function loadCurrentToken() {
-      fetch(`http://localhost:5000/api/current-token?department_id=${department}`)
+      fetch(`http://localhost:5000/api/current-token?department_id=${departmentId}`)
         .then(res => res.json())
         .then(data => {
           if (data.token && data.name) {
