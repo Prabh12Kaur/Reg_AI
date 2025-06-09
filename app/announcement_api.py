@@ -67,6 +67,11 @@ def call_next():
                 cur.execute("""
                     INSERT INTO current_token (token_uuid, token_number, patient_id, department_id, updated_at)
                     VALUES (%s, %s, %s, %s, NOW())
+                    ON CONFLICT (department_id) DO UPDATE SET
+                        token_uuid = EXCLUDED.token_uuid,
+                        token_number = EXCLUDED.token_number,
+                        patient_id = EXCLUDED.patient_id,
+                        updated_at = NOW()
                 """, (
                     next_token["uuid"],
                     next_token["token"],
