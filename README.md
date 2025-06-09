@@ -24,3 +24,18 @@ CREATE TABLE current_token (
     patient_id VARCHAR(255) NOT NULL,
     updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE current_token ADD COLUMN department_id VARCHAR(50);
+
+OR
+
+CREATE TABLE current_token (
+    id SERIAL PRIMARY KEY,
+    token_uuid UUID NOT NULL,
+    token_number INTEGER NOT NULL,
+    patient_id VARCHAR(255) NOT NULL,
+    department_id VARCHAR(50) NOT NULL,
+    updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL DEFAULT NOW(),
+    
+    CONSTRAINT unique_department UNIQUE (department_id)
+);
