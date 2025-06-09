@@ -34,7 +34,8 @@ def fetch_next_token():
                 return {
                     "uuid": row["token"],
                     "token": row["id"],
-                    "name": f"{row['first_name']} {row['last_name']}"
+                    "name": f"{row['first_name']} {row['last_name']}",
+                    "patient_id": row["patient_id"]
                 }
     return None
 
@@ -59,7 +60,7 @@ def call_next():
                 """, (
                     next_token["uuid"],
                     next_token["token"],
-                    next_token["name"]
+                    next_token["patient_id"]
                 ))
                 conn.commit()
 
