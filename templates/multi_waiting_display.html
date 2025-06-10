@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Multi-Department Token Display</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background: #000;
+      color: #fff;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      padding: 30px;
+    }
+    .dept-panel {
+      border: 2px solid #0f0;
+      margin: 15px;
+      padding: 20px;
+      width: 350px;
+      text-align: center;
+      background-color: #111;
+      border-radius: 10px;
+    }
+    .dept-name {
+      font-size: 30px;
+      margin-bottom: 20px;
+      color: #0f0;
+    }
+    .token {
+      font-size: 60px;
+      font-weight: bold;
+    }
+    .name {
+      font-size: 30px;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div id="container"></div>
+
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
+  <script>
+    const container = document.getElementById("container");
+    const socket = io('http://localhost:5000');
+    let audioEnabled = false;
+    let announcedTokens = {};
+
+    const announcementQueue = [];
+    let isSpeaking = false;
+
+    fetch('http://localhost:5000/api/departments')
+      .then(res => res.json())
+      .then(data => {
+        if (Array.isArray(data.departments) && data.departments.length > 0) {
+          initPanels(data.departments);
+        } else {
+          container.innerHTML = `<div style="color: red; font-size: 24px; text-align: center; width: 100%;">⚠ No departments found. Please check your database.</div>`;
+        }
+      })
+      .catch(err => {
+        console.error("Failed to load departments:", err);
+        container.innerHTML = `<div style="color: red; font-size: 24px; text-align: center; width: 100%;">❌ Unable to fetch department list. Please try again later.</div>`;
+      });
+
+    function initPanels(departments) {
+      departments.forEach(dept => {
+        const deptId = dept.id;
+        const deptName = dept.name;
+
+        createPanel(deptId, deptName);
+
+        fetch(`http://localhost:5000/api/current-token?department_id=${deptId}`)
+          .then(res => res.json())
+          .then(data => {
+            if (data.token && data.name) {
+              document.getElementById(`token-${deptId}`).textContent = `Token: ${data.token}`;
+              document.getElementById(`name-${deptId}`).textContent = data.name;
+              announcedTokens[deptId] = data.token;
+            }
+          });
+      });
+    }
+
+    function createPanel(departmentId, departmentName) {
+      const panel = document.createElement("div");
+      panel.className = "dept-panel";
+      panel.id = `panel-${departmentId}`;
+      panel.innerHTML = `
+        <div class="dept-name" id="dept-${departmentId}">${departmentName}</div>
+        <div class="token" id="token-${departmentId}">--</div>
+        <div class="name" id="name-${departmentId}">Waiting...</div>
+      `;
+      container.appendChild(panel);
+    }
+
+    socket.on('update-token', (data) => {
+      const deptId = data.department_id;
+      const token = data.token;
+      const name = data.name;
+      const force = data.force || false;
+
+      const tokenElem = document.getElementById(`token-${deptId}`);
+      const nameElem = document.getElementById(`name-${deptId}`);
+      const deptElem = document.getElementById(`dept-${deptId}`);
+
+      if (!tokenElem || !nameElem || !deptElem) return;
+
+      const deptName = deptElem.textContent || deptId;
+      tokenElem.textContent = `Token: ${token}`;
+      nameElem.textContent = name;
+
+      if (audioEnabled && (force || announcedTokens[deptId] !== token)) {
+        announcedTokens[deptId] = token;
+        queueAnnouncement(token, name, deptName);
+      }
+    });
+
+    function queueAnnouncement(token, name, dept) {
+      announcementQueue.push({ token, name, dept });
+      if (!isSpeaking) processQueue();
+    }
+
+    function processQueue() {
+      if (announcementQueue.length === 0) {
+        isSpeaking = false;
+        return;
+      }
+
+      isSpeaking = true;
+      const { token, name, dept } = announcementQueue.shift();
+
+      const voice = getIndianVoice();
+      if (!voice) {
+        isSpeaking = false;
+        return processQueue();
+      }
+
+      const bell = new Audio("/static/mixkit-home-standard-ding-dong-109.wav");
+      bell.play();
+
+      bell.onended = () => {
+        const eng = new SpeechSynthesisUtterance(`Token number ${token} in ${dept}. ${name}, please proceed.`);
+        eng.voice = voice;
+        eng.rate = 0.9;
+
+        const khasi = new SpeechSynthesisUtterance(
+          `Token ${convertNumberToKhasi(token)} ha ${dept}. ${name}, phi sngewbha rung sha kamra doktor.`
+        );
+        khasi.voice = voice;
+        khasi.rate = 0.9;
+
+        eng.onend = () => {
+          speechSynthesis.speak(khasi);
+        };
+
+        khasi.onend = () => {
+          setTimeout(processQueue, 300);
+        };
+
+        speechSynthesis.speak(eng);
+      };
+    }
+
+    function getIndianVoice() {
+      const voices = speechSynthesis.getVoices();
+      return voices.find(v => /Priya|Ravi|Heera/.test(v.name)) || voices.find(v => v.lang === "en-IN") || voices[0];
+    }
+
+    function convertNumberToKhasi(num) {
+      const units = ["", "wei", "ar", "lai", "saw", "san", "hynriew", "hynniaw", "phra", "khyndai"];
+      const tens = {
+        10: "shiphew", 20: "arphew", 30: "laiphew", 40: "sawphew",
+        50: "sanphew", 60: "hynriewphew", 70: "hynniawphew",
+        80: "phraphew", 90: "khyndaiphew"
+      };
+      if (num === 0) return "sunya";
+      if (num <= 9) return units[num];
+      if (num === 10) return tens[10];
+      if (num > 10 && num < 20) return `${tens[10]} ${units[num - 10]}`;
+      const t = Math.floor(num / 10) * 10;
+      const u = num % 10;
+      return `${tens[t]}${u > 0 ? ' ' + units[u] : ''}`;
+    }
+
+    function enableAudioOnce() {
+      audioEnabled = true;
+    }
+
+    window.addEventListener('click', enableAudioOnce, { once: true });
+    window.addEventListener('keydown', enableAudioOnce, { once: true });
+
+    window.speechSynthesis.onvoiceschanged = () => {
+      console.log("Voices loaded:", speechSynthesis.getVoices().map(v => v.name));
+    };
+  </script>
+</body>
+</html>

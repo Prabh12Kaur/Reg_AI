@@ -51,6 +51,12 @@ def fetch_next_token(department_id):
                 }
     return None
 
+def safe_emit(event, data):
+    try:
+        socketio.emit(event, data)
+    except Exception as e:
+        print(f"⚠ SocketIO emit failed: {e}")
+
 @announcement_bp.route('/')
 def health_check():
     return jsonify({"status": "API running"}), 200
@@ -64,10 +70,10 @@ def call_next():
 
     next_token = fetch_next_token(department_id)
     if next_token:
-        socketio.emit('update-token', {
+        safe_emit('update-token', {
             "token": next_token["token"],
             "name": next_token["name"],
-            "department": fetch_department_name(department_id)
+            "department_id": department_id
         })
 
         with get_db_connection() as conn:
@@ -130,6 +136,18 @@ def doctor_display():
 def waiting_display():
     return render_template("waiting_display.html")
 
+@announcement_bp.route('/multi-waiting-display')
+def multi_waiting_display():
+    return render_template("multi_waiting_display.html")
+
+@announcement_bp.route('/api/departments', methods=['GET'])
+def get_departments():
+    with get_db_connection() as conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT specialization_id AS id, name FROM specializations")
+            departments = cur.fetchall()
+            return jsonify({"departments": departments}), 200
+
 @announcement_bp.route('/api/announce-current', methods=['POST'])
 def announce_current():
     data = request.get_json()
@@ -149,11 +167,13 @@ def announce_current():
             """, (department_id,))
             row = cur.fetchone()
             if row:
-                socketio.emit('update-token', {
-                    "token": row["token_number"],
-                    "name": f"{row['first_name']} {row['last_name']}",
-                    "department": fetch_department_name(department_id)
-                })
+                safe_emit('update-token', {
+    "token": row["token_number"],
+    "name": f"{row['first_name']} {row['last_name']}",
+    "department_id": department_id,
+    "force": True  # ✅ forces re-announcement on frontend
+})
+
                 return jsonify({"success": True, "message": "Announcement repeated"}), 200
             else:
                 return jsonify({"success": False, "message": "No current token"}), 200
