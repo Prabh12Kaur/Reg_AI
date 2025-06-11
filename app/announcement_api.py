@@ -82,8 +82,6 @@ def call_next():
     if not department_id:
         return jsonify({"error": "Missing department_id"}), 400
 
-    # Step 1: Mark current consulting token as completed
-    # Step 1: Mark current token as completed (regardless of its current status)
     current = fetch_current_token(department_id)
     token_id = current["token_number"] if current else None
 
@@ -144,10 +142,19 @@ def call_next():
             "department_id": department_id,
             "status": token_status or "consulting"
         })
+        
+        print("📤 Final API response:", {
+            "token": next_token["token"],
+            "name": next_token["name"],
+            "patient_id": next_token["patient_id"],
+            "department": fetch_department_name(department_id)
+})
+
 
         return jsonify({
             "token": next_token["token"],
             "name": next_token["name"],
+            "patient_id": next_token["patient_id"],
             "department": fetch_department_name(department_id)
         }), 200
 
@@ -274,6 +281,7 @@ def move_next():
         return jsonify({
             "token": next_token["token"],
             "name": next_token["name"],
+            "patient_id": next_token["patient_id"],
             "department": fetch_department_name(department_id)
         }), 200
 
@@ -310,6 +318,7 @@ def get_current_token():
                 return jsonify({
                     "token": row["token_number"],
                     "name": f"{row['first_name']} {row['last_name']}",
+                    "patient_id": row.get("patient_id"),
                     "department": fetch_department_name(department_id)
                 }), 200
             else:
