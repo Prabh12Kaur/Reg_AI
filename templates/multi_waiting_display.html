@@ -12,6 +12,7 @@
       justify-content: center;
       padding: 30px;
     }
+
     .dept-panel {
       border: 2px solid #0f0;
       margin: 15px;
@@ -21,18 +22,27 @@
       background-color: #111;
       border-radius: 10px;
     }
+
     .dept-name {
       font-size: 30px;
       margin-bottom: 20px;
       color: #0f0;
     }
+
     .token {
       font-size: 60px;
       font-weight: bold;
     }
+
     .name {
       font-size: 30px;
       margin-top: 10px;
+    }
+
+    .status {
+      font-size: 20px;
+      margin-top: 8px;
+      color: orange;
     }
   </style>
 </head>
@@ -45,7 +55,7 @@
     const socket = io('http://localhost:5000');
     let audioEnabled = false;
     let announcedTokens = {};
-
+    const departmentMap = {};
     const announcementQueue = [];
     let isSpeaking = false;
 
@@ -53,6 +63,7 @@
       .then(res => res.json())
       .then(data => {
         if (Array.isArray(data.departments) && data.departments.length > 0) {
+          data.departments.forEach(dept => departmentMap[dept.id] = dept.name);
           initPanels(data.departments);
         } else {
           container.innerHTML = `<div style="color: red; font-size: 24px; text-align: center; width: 100%;">⚠ No departments found. Please check your database.</div>`;
@@ -67,7 +78,6 @@
       departments.forEach(dept => {
         const deptId = dept.id;
         const deptName = dept.name;
-
         createPanel(deptId, deptName);
 
         fetch(`http://localhost:5000/api/current-token?department_id=${deptId}`)
@@ -76,6 +86,9 @@
             if (data.token && data.name) {
               document.getElementById(`token-${deptId}`).textContent = `Token: ${data.token}`;
               document.getElementById(`name-${deptId}`).textContent = data.name;
+              if (data.status) {
+                document.getElementById(`status-${deptId}`).textContent = `Status: ${data.status}`;
+              }
               announcedTokens[deptId] = data.token;
             }
           });
@@ -90,6 +103,7 @@
         <div class="dept-name" id="dept-${departmentId}">${departmentName}</div>
         <div class="token" id="token-${departmentId}">--</div>
         <div class="name" id="name-${departmentId}">Waiting...</div>
+        <div class="status" id="status-${departmentId}"></div>
       `;
       container.appendChild(panel);
     }
@@ -99,18 +113,24 @@
       const token = data.token;
       const name = data.name;
       const force = data.force || false;
+      const status = data.status || "";
+      const deptName = departmentMap[deptId] || deptId;
 
       const tokenElem = document.getElementById(`token-${deptId}`);
       const nameElem = document.getElementById(`name-${deptId}`);
-      const deptElem = document.getElementById(`dept-${deptId}`);
+      const statusElem = document.getElementById(`status-${deptId}`);
 
-      if (!tokenElem || !nameElem || !deptElem) return;
+      if (!tokenElem || !nameElem) return;
 
-      const deptName = deptElem.textContent || deptId;
       tokenElem.textContent = `Token: ${token}`;
       nameElem.textContent = name;
+      statusElem.textContent = status ? `Status: ${status}` : "";
 
-      if (audioEnabled && (force || announcedTokens[deptId] !== token)) {
+      if (
+        audioEnabled &&
+        (force || announcedTokens[deptId] !== token) &&
+        token !== "--"
+      ) {
         announcedTokens[deptId] = token;
         queueAnnouncement(token, name, deptName);
       }

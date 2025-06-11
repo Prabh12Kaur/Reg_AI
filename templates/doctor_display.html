@@ -3,28 +3,72 @@
 <head>
   <title>Doctor Interface</title>
 </head>
+
 <body>
-  <h1>Doctor Panel</h1>
+  <h1 id="page-title">Doctor Panel</h1>
   <div id="department-label" style="font-size: 20px; color: green;"></div>
 
   <button onclick="callNext()">Call Next</button>
   <button onclick="announceAgain()">Announce Again</button>
-  <div id="current" style="margin-top: 20px;">No token yet</div>
+  <button onclick="moveNext()">Move Next</button>
 
+  <div id="current" style="margin-top: 20px;">No token yet</div>
+  <div id="status" style="margin-top: 10px; color: orange;"></div>
+  <div id="dept-name" style="margin-top: 10px; color: #0cf; font-weight: bold;"></div>
+
+  <script src="https://cdn.socket.io/4.4.1/socket.io.min.js"></script>
   <script>
     const urlParams = new URLSearchParams(window.location.search);
     const departmentId = urlParams.get("department_id") || "OPD";
 
     let currentToken = null;
     let currentName = null;
+    let currentStatus = null;
+    let deptName = departmentId;  // default fallback
 
+    const socket = io("http://localhost:5000");
+
+    socket.on('update-token', (data) => {
+      if (data.department_id !== departmentId) return;
+
+      const token = data.token;
+      const name = data.name;
+      const status = data.status || "";
+
+      document.getElementById("current").innerText = `Token ${token}: ${name}`;
+      document.getElementById("status").innerText = status ? `Status: ${status}` : "";
+
+      currentToken = token;
+      currentName = name;
+      currentStatus = status;
+    });
+
+    // Fetch department name
     fetch(`http://localhost:5000/api/department-name?department_id=${departmentId}`)
       .then(res => res.json())
       .then(data => {
-        document.getElementById("department-label").textContent =
-          `Department: ${data.department_name || departmentId}`;
+        deptName = data.department_name || departmentId;
+        document.getElementById("department-label").textContent = `Department: ${deptName}`;
+        document.getElementById("dept-name").textContent = `(${deptName})`;
+        document.getElementById("page-title").textContent = `Doctor Panel (${deptName})`;
       });
 
+    // Load current token on page load
+    function loadCurrentToken() {
+      fetch(`http://localhost:5000/api/current-token?department_id=${departmentId}`)
+        .then(res => res.json())
+        .then(data => {
+          if (data.token && data.name) {
+            document.getElementById("current").innerText = `Token ${data.token}: ${data.name} (${deptName})`;
+            document.getElementById("status").innerText = data.status ? `Status: ${data.status}` : "";
+            currentToken = data.token;
+            currentName = data.name;
+            currentStatus = data.status;
+          }
+        });
+    }
+
+    // Call next token
     function callNext() {
       fetch('http://localhost:5000/api/call-next', {
         method: 'POST',
@@ -34,15 +78,19 @@
       .then(res => res.json())
       .then(data => {
         if (data.token) {
-          document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
+          document.getElementById("current").innerText = `Token ${data.token}: ${data.name} (${deptName})`;
+          document.getElementById("status").innerText = "Status: consulting";
           currentToken = data.token;
           currentName = data.name;
+          currentStatus = "consulting";
         } else {
           document.getElementById("current").innerText = data.message;
+          document.getElementById("status").innerText = "";
         }
       });
     }
 
+    // Re-announce current token
     function announceAgain() {
       if (currentToken && currentName) {
         fetch('http://localhost:5000/api/announce-current', {
@@ -59,16 +107,26 @@
       }
     }
 
-    function loadCurrentToken() {
-      fetch(`http://localhost:5000/api/current-token?department_id=${departmentId}`)
-        .then(res => res.json())
-        .then(data => {
-          if (data.token && data.name) {
-            document.getElementById("current").innerText = `Token ${data.token}: ${data.name}`;
-            currentToken = data.token;
-            currentName = data.name;
-          }
-        });
+    // Move to next token, mark current as recall or hold
+    function moveNext() {
+      fetch('http://localhost:5000/api/move-next', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ department_id: departmentId })
+      })
+      .then(res => res.json())
+      .then(data => {
+        if (data.token) {
+          document.getElementById("current").innerText = `Token ${data.token}: ${data.name} (${deptName})`;
+          document.getElementById("status").innerText = "Status: consulting";
+          currentToken = data.token;
+          currentName = data.name;
+          currentStatus = "consulting";
+        } else {
+          document.getElementById("current").innerText = data.message;
+          document.getElementById("status").innerText = "";
+        }
+      });
     }
 
     window.onload = loadCurrentToken;
