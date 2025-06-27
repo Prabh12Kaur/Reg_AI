@@ -39,7 +39,7 @@ def insert_token_to_db(token, patient_id, department_id, dt_str):
     return new_id, dt, expires_at
 
 # ---------------- QR IMAGE GENERATOR ----------------
-def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_url):
+def generate_qr_card_image(patient_id, name, department_name, valid_till, id, qr_url):
     qr = qrcode.make(qr_url)
     qr = qr.resize((200, 200))
 
@@ -47,7 +47,7 @@ def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_u
     draw = ImageDraw.Draw(card)
 
     try:
-        font = ImageFont.truetype("arial.ttf", 16)
+        font = ImageFont.truetype("arial.ttf", 12)
     except:
         font = ImageFont.load_default()
 
@@ -55,11 +55,12 @@ def generate_qr_card_image(patient_id, name, department_id, valid_till, id, qr_u
     card.paste(qr, (qr_x, 10))
 
     text_y_start = 230
-    line_height = 25
-    draw.text((20, text_y_start), f"Patient ID: {patient_id} {name}", fill="black", font=font)
-    draw.text((20, text_y_start + line_height), f"Department: {department_id}", fill="black", font=font)
-    draw.text((20, text_y_start + 2 * line_height), f"Valid till: {valid_till.strftime('%Y-%m-%d %H:%M')}", fill="black", font=font)
-    draw.text((20, text_y_start + 3 * line_height), f"Token number: {id}", fill="black", font=font)
+    line_height = 20
+    draw.text((20, text_y_start + 0 * line_height), f"Patient ID: {patient_id}", fill="black", font=font)
+    draw.text((20, text_y_start + 1*line_height), f"Name: {name}", fill="black", font=font)
+    draw.text((20, text_y_start + 2*line_height), f"Department: {department_name}", fill="black", font=font)
+    draw.text((20, text_y_start + 3 * line_height), f"Valid till: {valid_till.strftime('%Y-%m-%d %H:%M')}", fill="black", font=font)
+    draw.text((20, text_y_start + 4 * line_height), f"Token number: {id}", fill="black", font=font)
 
     buf = io.BytesIO()
     card.save(buf, format="PNG")
@@ -73,13 +74,14 @@ def register():
         patient_id = data["patient_id"]
         name = data["name"]
         department_id = data["department_id"]
+        department_name = data["department_name"]
         datetime_str = data["date_time"]
 
         token = str(uuid.uuid4())
         daily_id, dt, expires_at = insert_token_to_db(token, patient_id, department_id, datetime_str)
 
         qr_url = f"{request.host_url}patient-info?upid={patient_id}"
-        qr_card_b64 = generate_qr_card_image(patient_id, name, department_id, expires_at, daily_id, qr_url)
+        qr_card_b64 = generate_qr_card_image(patient_id, name, department_name, expires_at, daily_id, qr_url)
 
         return jsonify({
             "message": "Patient registered successfully",
