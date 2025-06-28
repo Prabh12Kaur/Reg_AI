@@ -80,7 +80,7 @@ def register():
         token = str(uuid.uuid4())
         daily_id, dt, expires_at = insert_token_to_db(token, patient_id, department_id, datetime_str)
 
-        qr_url = f"{request.host_url}patient-info?upid={patient_id}"
+        qr_url = f"https://megha-dev.sirobilt.com/patient/{patient_id}"
         qr_card_b64 = generate_qr_card_image(patient_id, name, department_name, expires_at, daily_id, qr_url)
 
         return jsonify({
